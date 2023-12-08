@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "types": ["express"],
     "target": "es5",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -22,6 +23,17 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "app/SideBar/SideBar",
+    "app/api/register/route.js",
+    "app/register/page.jsx",
+    "app/login/page.jsx",
+    "app/SideBar/SideBar.jsx",
+    "app/login/page.jsx"
+  ],
   "exclude": ["node_modules"]
 }

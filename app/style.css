@@ -1,0 +1,20 @@
+/**
+ * In your Tailwind CSS file or where you define your styles
+ *
+ * @format
+ */
+
+.before-hover {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out; /* Adding a transition effect */
+}
+
+.after-hover {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out; /* Adding a transition effect */
+}
+
+.before-hover:hover,
+.after-hover:hover {
+  opacity: 1;
+}

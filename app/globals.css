@@ -1,14 +1,16 @@
+/** @format */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
+  --background-end-rgb: 255, 255, 255; */
+/* } */
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --foreground-rgb: 255, 255, 255;
     --background-start-rgb: 0, 0, 0;
@@ -24,4 +26,31 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+} */
+
+/* In your Tailwind CSS file or where you define your styles */
+
+.before-hover {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out; /* Adding a transition effect */
+}
+
+.after-hover {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out; /* Adding a transition effect */
+}
+
+.before-hover:hover,
+.after-hover:hover {
+  opacity: 1;
+}
+
+form > div {
+  @apply flex flex-col gap-2;
+}
+input {
+  @apply shadow-md px-6 py-2 border border-slate-300;
+}
+label {
+  @apply py-2;
 }
