@@ -4,6 +4,7 @@ import connectDB from "@/app/lib/mongodb";
 import User from "@/app/models/users";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
 /**
  * Handles POST request to submit contact form data.
@@ -11,6 +12,12 @@ import mongoose from "mongoose";
  * @returns {Object} JSON response indicating success or error
  */
 export async function POST(req) {
+  if (req.method !== "POST") {
+    return NextResponse.error({
+      status: 405,
+      message: "Method Not Allowed",
+    });
+  }
   const {
     firstName,
     lastName,
@@ -19,11 +26,14 @@ export async function POST(req) {
     phoneNumber,
     gender,
     password,
-    confirmPassword,
   } = await req.json();
 
   try {
     await connectDB();
+
+    // Hash the password before storing it
+    const hashedPassword = await bcrypt.hash(password, 10); // Adjust the saltRounds as needed
+
     await User.create({
       firstName,
       lastName,
@@ -31,12 +41,11 @@ export async function POST(req) {
       email,
       phoneNumber,
       gender,
-      password,
-      confirmPassword,
+      password: hashedPassword, // Store the hashed password in the database
     });
 
     return NextResponse.json({
-      msg: ["User register succsfully"],
+      msg: ["User registered successfully"],
       success: true,
     });
   } catch (error) {

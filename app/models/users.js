@@ -22,6 +22,7 @@ const userSchema = new Schema({
   username: {
     type: String,
     required: [true, "Username is required."],
+    unique: [true, "Username already in use"],
     trim: true,
     minLength: [6, "Username must be larger than 6 characters"],
     maxLength: [20, "Username must be lesser than 20 characters"],
@@ -30,12 +31,13 @@ const userSchema = new Schema({
   email: {
     type: String,
     required: [true, "Email is required"],
-    unique: true,
+    unique: [true, "Email alraedy in use"],
     match: [
       /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/,
       "Please enter a valid email",
     ],
   },
+
   phoneNumber: {
     type: String,
     required: [true, "Phone number is required."],
@@ -51,17 +53,6 @@ const userSchema = new Schema({
     type: String,
     required: [true, "Password is required."],
     minLength: [8, "Password must be at least 8 characters long"],
-  },
-
-  confirmPassword: {
-    type: String,
-    required: [true, "Confirm password is required."],
-    validate: {
-      validator: function (value) {
-        return value === this.password;
-      },
-      message: "Passwords do not match",
-    },
   },
 
   date: {

@@ -33,7 +33,8 @@
     "app/register/page.jsx",
     "app/login/page.jsx",
     "app/SideBar/SideBar.jsx",
-    "app/login/page.jsx"
+    "app/login/page.jsx",
+    "app/page.jsx"
   ],
   "exclude": ["node_modules"]
 }

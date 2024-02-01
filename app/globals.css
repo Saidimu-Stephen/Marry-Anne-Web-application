@@ -54,3 +54,21 @@ input {
 label {
   @apply py-2;
 }
+
+/* Default text size */
+.text-4xl {
+  font-size: 2.5rem; /* Adjust this value based on your requirements */
+}
+
+/* Media queries for responsive text size */
+@media screen and (max-width: 768px) {
+  .text-4xl {
+    font-size: 2rem; /* Adjust the font size for smaller screens */
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .text-4xl {
+    font-size: 1.5rem; /* Adjust the font size for even smaller screens */
+  }
+}

@@ -43,9 +43,10 @@ function Header() {
           <div>
             <a href="/">
               <h1
-                className="text-4xl font-bold text-transparent bg-gradient-to-r
-             from-red-500 via-yellow-500 to-blue-500 bg-clip-text animate-glitter"
-                style={{ cursor: "pointer" }}>
+                className="text-4xl md:text-3xl sm:text-2xl 
+                font-bold text-transparent bg-gradient-to-r
+  from-red-500 via-yellow-500
+   to-blue-500 bg-clip-text animate-glitter cursor-pointer">
                 SherryHomes
               </h1>
             </a>

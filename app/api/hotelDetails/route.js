@@ -10,6 +10,7 @@ export async function POST(req) {
   const {
     hotelName,
     selectedRoomType,
+    description,
     roomServices,
     mainImage,
     images,
@@ -23,6 +24,7 @@ export async function POST(req) {
     await hotelDetails.create({
       hotelName,
       selectedRoomType,
+      description,
       roomServices,
       mainImage,
       images,

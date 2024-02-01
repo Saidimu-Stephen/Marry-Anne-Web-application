@@ -1,0 +1,91 @@
+<!-- @format -->
+
+User
+where should iplace this functions
+ChatGPT
+The functions related to managing the JWT token and performing authenticated requests can be placed in appropriate files within your Next.js application, typically in utility/helper files or within a centralized service layer for better organization.
+
+Here's a breakdown of where you might place these functions:
+
+1. Function for Sending Requests with Token
+   The fetchWithToken function, responsible for sending requests with the stored token in the header, can be placed in a utility file:
+
+utils/api.js
+
+javascript
+Copy code
+const fetchWithToken = async (url, options = {}) => {
+const token = localStorage.getItem('token');
+
+if (token) {
+options.headers = {
+...options.headers,
+Authorization: `Bearer ${token}`,
+};
+}
+
+return fetch(url, options);
+};
+
+export default fetchWithToken;
+Save to grepper 2. Middleware for Token Verification on the Server-side
+The verifyToken middleware for server-side validation of the JWT token can be placed in a middleware file:
+
+middlewares/authMiddleware.js
+
+javascript
+Copy code
+import jwt from 'jsonwebtoken';
+
+const verifyToken = (req, res, next) => {
+const token = req.headers.authorization;
+
+if (!token) {
+return res.status(401).json({ msg: 'No token, authorization denied' });
+}
+
+try {
+const decoded = jwt.verify(token.split(' ')[1], 'your_secret_key');
+req.user = decoded.user;
+next();
+} catch (err) {
+return res.status(401).json({ msg: 'Token is not valid' });
+}
+};
+
+export default verifyToken;
+Save to grepper
+Usage:
+In your Next.js pages or API routes, you can import and use these functions:
+
+Example in a Page Component:
+
+javascript
+Copy code
+import fetchWithToken from '../utils/api';
+
+const fetchData = async () => {
+try {
+const response = await fetchWithToken('/api/protected-route');
+const data = await response.json();
+// Handle the data received from the protected route
+} catch (error) {
+// Handle errors
+}
+};
+
+// Then call fetchData whenever necessary in your component
+Save to grepper
+Example in an API Route:
+
+javascript
+Copy code
+import verifyToken from '../../middlewares/authMiddleware';
+
+// Apply middleware to a protected route
+router.get('/protected', verifyToken, (req, res) => {
+// Access req.user to get the user details from the token
+res.json({ user: req.user });
+});
+Save to grepper
+Remember to replace 'your_secret_key' with the actual secret key used for signing the JWT tokens on your server. Organizing functions in separate files allows for better code organization and reuse across different parts of your application.
