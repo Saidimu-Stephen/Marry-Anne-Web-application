@@ -1,10 +1,9 @@
 /** @format */
 
 import connectDB from "@/app/lib/mongodb";
-import roomImages from "../../models/roomImages";
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
-import sharp from "sharp";
+import { saveMainImage } from "../../services/mainImageService";
+import { saveMinorImages } from "../../services/minorImageService";
 
 export async function POST(req) {
   try {
@@ -12,119 +11,91 @@ export async function POST(req) {
 
     const { selectedRoomName, mainImage, minorImages } = await req.json();
 
-    // Process and resize images
-    const processedMinorImages = await Promise.all(
-      minorImages.map(async (imageBase64) => {
-        try {
-          const resizedImageBuffer = await sharp(
-            Buffer.from(imageBase64, "base64")
-          )
-            .resize({ width: 800 }) // Adjust width as needed
-            .toBuffer();
-          return resizedImageBuffer.toString("base64");
-        } catch (error) {
-          console.error("Error processing image:", error);
-          return null; // or handle error in an appropriate manner
-        }
-      })
+    // Save the main image
+    const mainImageResponse = await saveMainImage(selectedRoomName, mainImage);
+
+    // save the minor image
+    const minorImageResponse = await saveMinorImages(
+      selectedRoomName,
+      minorImages
     );
 
-    // Save images to database
-    const newRoomImages = new roomImages({
-      selectedRoomName,
-      mainImage,
-      minorImages: processedMinorImages.filter(Boolean), // Filter out any null values
-      // Add other fields as needed
-    });
+    // Gather all responses and messages
+    const responses = [mainImageResponse, minorImageResponse];
+    const messages = responses.map((response) => response.message);
 
-    await newRoomImages.save();
+    // Check if any response indicates failure
+    const hasFailure = responses.some((response) => !response.success);
 
-    return NextResponse.json({
-      msg: "Images saved successfully",
-      success: true,
-    });
+    // Return appropriate response to the frontend
+    if (hasFailure) {
+      return NextResponse.json({ messages });
+    } else {
+      return NextResponse.json({
+        messages: [...messages, "Images saved successfully"],
+      });
+    }
+
+    // if (!mainImageResponse.success) {
+    //   // If saving the main image failed, return the error response
+    //   return NextResponse.json({
+    //     message: mainImageResponse.message,
+    //   });
+    // }
+    // if (!minorImageResponse.success) {
+    //   // If saving the minor images failed, return the error response
+    //   return NextResponse.json({
+    //     message: minorImageResponse.message,
+    //   });
+    // }
+
+    // // Both main and minor images were saved successfully
+    // return NextResponse.json({
+    //   message: "Images saved successfully",
+    // });
   } catch (error) {
     console.error("Error:", error.message);
 
-    // Check for specific MongoDB error codes
+    // Handle different types of errors and return appropriate response
     if (error instanceof mongoose.Error.ValidationError) {
       let errorList = [];
       for (let e in error.errors) {
         errorList.push(error.errors[e].message);
       }
       console.log(errorList);
-      return NextResponse.json({ msg: errorList });
+      return NextResponse.json({ messages: errorList });
     } else if (error instanceof mongoose.Error.CastError) {
-      // Handle CastError (e.g., invalid ObjectId)
-      return NextResponse.json({ msg: "Invalid ID provided." });
+      return NextResponse.json({ messages: ["Invalid ID provided."] });
     } else if (error.code === 11000 || error.code === 11001) {
-      // Handle duplicate key error (MongoError: E11000 duplicate key error)
-      return NextResponse.json({ msg: "Duplicate key error." });
+      return NextResponse.json({ messages: ["Duplicate key error."] });
     } else if (error.code === 11600) {
-      // Handle MongoDB chunk error
-      return NextResponse.json({ msg: "Chunk error." });
+      return NextResponse.json({ messages: ["Chunk error."] });
     } else {
-      // Handle other MongoDB errors
-      return NextResponse.json({ msg: "Unable to save images." });
+      return NextResponse.json({ messages: ["Unable to save images."] });
     }
   }
 }
 
-// /** @format */
 
-// import connectDB from "@/app/lib/mongodb";
-// import roomImages from "../../models/roomImages";
-// import { NextResponse } from "next/server";
-// import mongoose from "mongoose";
-
-// export async function POST(req) {
-//   try {
-//     await connectDB();
-
-//     // const { selectedRoomName, mainImage, minorImages } = await req.json();
-//     const { selectedRoomName, mainImage, minorImages } = await req.json();
-
-//     console.log(typeof selectedRoomName);
-//     console.log(typeof mainImage);
-//     console.log(typeof minorImages);
-//     // Save images to database
-//     const newRoomImages = new roomImages({
-//       selectedRoomName,
-//       mainImage,
-//       minorImages,
-//       // Add other fields as needed
-//     });
-
-//     await newRoomImages.save();
-
-//     return NextResponse.json({
-//       msg: "Images saved successfully",
-//       success: true,
-//     });
-//   } catch (error) {
+//catch (error) {
 //     console.error("Error:", error.message);
 
-//     // Check for specific MongoDB error codes
+//     // Handle different types of errors
 //     if (error instanceof mongoose.Error.ValidationError) {
 //       let errorList = [];
 //       for (let e in error.errors) {
 //         errorList.push(error.errors[e].message);
 //       }
 //       console.log(errorList);
-//       return NextResponse.json({ msg: errorList });
+//       return NextResponse.json({ message: errorList });
 //     } else if (error instanceof mongoose.Error.CastError) {
-//       // Handle CastError (e.g., invalid ObjectId)
-//       return NextResponse.json({ msg: "Invalid ID provided." });
+//       return NextResponse.json({ message: "Invalid ID provided." });
 //     } else if (error.code === 11000 || error.code === 11001) {
-//       // Handle duplicate key error (MongoError: E11000 duplicate key error)
-//       return NextResponse.json({ msg: "Duplicate key error." });
+//       return NextResponse.json({ message: "Duplicate key error." });
 //     } else if (error.code === 11600) {
-//       // Handle MongoDB chunk error
-//       return NextResponse.json({ msg: "Chunk error." });
+//       return NextResponse.json({ message: "Chunk error." });
 //     } else {
-//       // Handle other MongoDB errors
-//       return NextResponse.json({ msg: "Unable to save images." });
+//       return NextResponse.json({ message: "Unable to save images." });
 //     }
 //   }
 // }
-// // /**
