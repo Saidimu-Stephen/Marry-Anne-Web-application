@@ -4,36 +4,70 @@ import React, { useEffect, useState } from "react";
 
 function ImageUpload({ selectedRoomName }) {
   const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
   const [error, setError] = useState("");
   const [mainImage, setMainImage] = useState();
   const [minorImages, setMinorImages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [mainImageDatabase, setMainImageDatabase] = useState();
+  const [minorImagesDatabase, setMinorImagesDatabase] = useState([]);
+  //
+  //
+  useEffect(() => {
+    const fetchImages = async () => {
+      try {
+        const response = await fetch("/api/getImages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ selectedRoomName }),
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch images");
+        }
+        const data = await response.json();
 
-  // useEffect(() => {
-  //   const fetchImages = async () => {
-  //     try {
-  //       const response = await fetch("/api/getImages", {
-  //         method: "POST",
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //         },
-  //         body: JSON.stringify({ selectedRoomName }),
-  //       });
-  //       if (!response.ok) {
-  //         throw new Error("Failed to fetch images");
-  //       }
-  //       const data = await response.json();
-  //       console.log(data);
-  //     } catch (error) {
-  //       console.error("Error fetching data:", error);
-  //       setError("Failed to fetch images");
-  //     }
-  //   };
+        if (data.mainImage === null || data.minorImages === null) {
+          // Handle case where no images are found
+          setMainImageDatabase(null);
+          setMinorImagesDatabase([]);
+          setMessage(data.message);
+        } else {
+          // Extract main image data
+          const mainImageData = data.mainImage.map((image) => image.mainImage);
+          // Extract minor images data
+          const minorImagesData = data.minorImages.flatMap(
+            (image) => image.minorImages
+          );
+          // Set main image data to state
+          setMainImageDatabase(mainImageData);
+          // Set minor images data to state
+          setMinorImagesDatabase(minorImagesData);
+          if (data.messages) {
+            setMessage(data.messages);
+            setTimeout(() => setMessages([]), 5000); // Assuming only one error message is returned
+          }
+        }
 
-  //   if (selectedRoomName) {
-  //     fetchImages();
-  //   }
-  // }, [selectedRoomName]);
+        forceUpdate(Date.now());
+
+        // Force re-render to reflect state changes
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setError("Failed to fetch images");
+        setTimeout(() => setError(""), 5000);
+      }
+    };
+
+    if (selectedRoomName) {
+      fetchImages();
+    }
+  }, [selectedRoomName]);
+
+  //
+
+  //
 
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
@@ -151,139 +185,182 @@ function ImageUpload({ selectedRoomName }) {
         throw new Error("Failed to save images");
       }
       const responseData = await res.json();
-      setMessages([responseData.message]);
-      setTimeout(() => setMessages([]), 5000); // Clear messages after 5 seconds
+
+      setMessages(responseData.messages);
+
+      setTimeout(() => setMessages([]), 5000);
     } catch (error) {
       console.error("Error:", error.message);
       setMessages(["Failed to save images"]);
-      setTimeout(() => setMessages([]), 5000); // Clear messages after 5 seconds
+      setTimeout(() => setMessages([]), 5000);
     } finally {
       setLoading(false);
     }
   };
 
-   return (
-     <div className='container mx-auto px-4 md:flex md:flex-col md:items-center justify-center py-2 flex flex-col'>
-       <h1 className='underline text-3xl font-semibold text-center'>
-         Upload images
-       </h1>
+  return (
+    <div className='container mx-auto px-4 md:flex md:flex-col md:items-center justify-center py-2 flex flex-col'>
+      {mainImageDatabase &&
+      minorImagesDatabase &&
+      mainImageDatabase.length > 0 &&
+      minorImagesDatabase.length > 0 ? (
+        <div className='flex flex-col container'>
+          {/* Display Main Image */}
+          <div className='mb-8 '>
+            <h1 className='text-2xl font-semibold mb-2'>Main Image</h1>
+            <img
+              src={mainImageDatabase[0]} // Assuming mainImageDatabase contains only one image
+              alt='Main Image'
+              className='w-64 h-64 rounded-lg shadow-md'
+            />
+          </div>
+          {/* Display Minor Images */}
+          <div className='max-h-0.5'>
+            <h1 className='text-2xl font-semibold mb-2'>Minor Images</h1>
 
-       {/* Main image picker */}
-       <div className='flex items-center p-2 flex-col justify-center'>
-         <h1 className='text-xl text-gray-500 font-semibold'>Main image</h1>
-         <label htmlFor='mainImagePicker' className='cursor-pointer'>
-           <div className='w-64 h-32 bg-gray-200 border-2 border-dashed rounded-lg hover:border-blue-500 transition duration-300 flex justify-center'>
-             {mainImage ? (
-               <img
-                 src={
-                   mainImage && mainImage.startsWith("data:")
-                     ? mainImage
-                     : URL.createObjectURL(mainImage)
-                 }
-                 alt='Selected'
-                 className='w-full h-full object-cover rounded-lg'
-               />
-             ) : (
-               <>
-                 <svg
-                   xmlns='http://www.w3.org/2000/svg'
-                   className='h-16 w-16 text-blue-500'
-                   viewBox='0 0 20 20'
-                   fill='currentColor'>
-                   <path
-                     fillRule='evenodd'
-                     d='M16 7V5a5 5 0 00-5-5H9a5 5 0 00-5 5v2a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3v-6a3 3 0 00-3-3zM7 5a3 3 0 016 0v2H7V5z'
-                     clipRule='evenodd'
-                   />
-                 </svg>
-                 <span className='ml-2 text-gray-600'>Choose Image</span>
-               </>
-             )}
-           </div>
-         </label>
-         <input
-           type='file'
-           id='mainImagePicker'
-           className='hidden'
-           accept='image/*'
-           onChange={handleImageChange}
-         />
-       </div>
+            <div className='flex overflow-x-auto'>
+              {minorImagesDatabase.map((image, index) => (
+                <div key={index} className='flex-none mx-2'>
+                  <img
+                    src={image}
+                    alt={`Minor Image ${index + 1}`}
+                    className='w-64 h-48 max-h-50 max-w-50 rounded-lg shadow-md'
+                  />
+                </div>
+              ))}
+            </div>
 
-       {/* Multiple image picker */}
-       <div className='mt-4 p-2 flex flex-col justify-center items-center'>
-         <h1 className='text-xl font-semibold text-gray-600'>
-           Other supporting images
-         </h1>
-         <div className='relative'>
-           <button className='bg-blue-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600'>
-             Choose Images
-           </button>
-           <input
-             type='file'
-             accept='image/*'
-             multiple
-             onChange={handleMultipleImageChange}
-             className='absolute inset-0 opacity-0 cursor-pointer'
-           />
-         </div>
-         <div
-           className='grid grid-cols-2 gap-4 mt-4'
-           style={{ maxHeight: "200px", overflowY: "auto" }}>
-           {minorImages.map((imageData, index) => (
-             <div key={index} className='relative'>
-               <img
-                 src={imageData} // Use imageData directly if it's already base64 encoded
-                 alt={`Preview ${index}`}
-                 className='w-full h-32 object-cover rounded-lg'
-               />
-               <button
-                 onClick={() => handleDeleteImage(index)}
-                 className='absolute top-0 right-0 bg-red-400 hover:bg-red-700 text-white px-2 py-1 rounded-full'>
-                 delete
-               </button>
-             </div>
-           ))}
-         </div>
-       </div>
+            {/* </div> */}
+          </div>
+        </div>
+      ) : (
+        <div>
+          <h1 className='underline text-3xl font-semibold text-center'>
+            Upload images
+          </h1>
 
-       <div className='flex justify-center p-y2 bg-green-500 w-full relative'>
-         <button
-           onClick={handleSaveToDatabase}
-           disabled={loading} // Disable button while loading
-           className={`bg-blue-500 text-white px-4 py-2 rounded mt-4 hover:bg-blue-600 transition duration-300 absolute ${
-             loading ? "opacity-50 cursor-not-allowed" : "" // Apply styles for loading state
-           }`}>
-           Save to Database
-         </button>
-         {loading && (
-           <div className='absolute p-2 inset-0 flex items-center justify-center bg-black bg-opacity-50 text-green-500 text-xl'>
-             Loading...
-           </div>
-         )}
-       </div>
-       {/* Pop-up for displaying messages */}
-       {messages.length > 0 && (
-         <div className='fixed inset-0 flex items-center justify-center'>
-           <div className='bg-green-500 text-black px-4 py-2 rounded'>
-             {messages.map((message, index) => (
-               <div key={index}>{message}</div>
-             ))}
-           </div>
-         </div>
-       )}
-       {error && (
-         <div className='fixed inset-0 flex items-center justify-center'>
-           <div className='bg-red-500 text-white px-4 py-2 rounded'>
-             {error}
-           </div>
-         </div>
-       )}
-       {/* 
+          {/* Main image picker */}
+          <div className='flex items-center p-2 flex-col justify-center'>
+            <h1 className='text-xl text-gray-500 font-semibold'>Main image</h1>
+            <label htmlFor='mainImagePicker' className='cursor-pointer'>
+              <div className='w-64 h-32 bg-gray-200 border-2 border-dashed rounded-lg hover:border-blue-500 transition duration-300 flex justify-center'>
+                {mainImage ? (
+                  <img
+                    src={
+                      mainImage && mainImage.startsWith("data:")
+                        ? mainImage
+                        : URL.createObjectURL(mainImage)
+                    }
+                    alt='Selected'
+                    className='w-full h-full object-cover rounded-lg'
+                  />
+                ) : (
+                  <>
+                    <svg
+                      xmlns='http://www.w3.org/2000/svg'
+                      className='h-16 w-16 text-blue-500'
+                      viewBox='0 0 20 20'
+                      fill='currentColor'>
+                      <path
+                        fillRule='evenodd'
+                        d='M16 7V5a5 5 0 00-5-5H9a5 5 0 00-5 5v2a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3v-6a3 3 0 00-3-3zM7 5a3 3 0 016 0v2H7V5z'
+                        clipRule='evenodd'
+                      />
+                    </svg>
+                    <span className='ml-2 text-gray-600'>Choose Image</span>
+                  </>
+                )}
+              </div>
+            </label>
+            <input
+              type='file'
+              id='mainImagePicker'
+              className='hidden'
+              accept='image/*'
+              onChange={handleImageChange}
+            />
+          </div>
+
+          {/* Multiple image picker */}
+          <div className='mt-4 p-2 flex flex-col justify-center items-center'>
+            <h1 className='text-xl font-semibold text-gray-600'>
+              Other supporting images
+            </h1>
+            <div className='relative'>
+              <button className='bg-blue-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600'>
+                Choose Images
+              </button>
+              <input
+                type='file'
+                accept='image/*'
+                multiple
+                onChange={handleMultipleImageChange}
+                className='absolute inset-0 opacity-0 cursor-pointer'
+              />
+            </div>
+            <div
+              className='grid grid-cols-2 gap-4 mt-4'
+              style={{ maxHeight: "200px", overflowY: "auto" }}>
+              {minorImages.map((imageData, index) => (
+                <div key={index} className='relative'>
+                  <img
+                    src={imageData} // Use imageData directly if it's already base64 encoded
+                    alt={`Preview ${index}`}
+                    className='w-full h-32 object-cover rounded-lg'
+                  />
+                  <button
+                    onClick={() => handleDeleteImage(index)}
+                    className='absolute top-0 right-0 bg-red-400 hover:bg-red-700 text-white px-2 py-1 rounded-full'>
+                    delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className='flex justify-center p-y2 bg-green-500 w-full relative'>
+            <button
+              onClick={handleSaveToDatabase}
+              disabled={loading} // Disable button while loading
+              className={`bg-blue-500 text-white px-4 py-2 rounded mt-4 hover:bg-blue-600 transition duration-300 absolute ${
+                loading ? "opacity-50 cursor-not-allowed" : "" // Apply styles for loading state
+              }`}>
+              Save to Database
+            </button>
+            {loading && (
+              <div className='absolute p-2 inset-0 flex items-center justify-center bg-black bg-opacity-50 text-green-500 text-xl'>
+                Loading...
+              </div>
+            )}
+          </div>
+          {/* Pop-up for displaying messages */}
+          {messages.length > 0 && (
+            <div className='fixed inset-0 flex items-center justify-center'>
+              <div className='bg-green-500 text-black px-4 py-2 rounded-lg shadow-lg max-w-md w-full'>
+                <h2 className='text-lg font-semibold mb-2'>Messages:</h2>
+                {messages.map((message, index) => (
+                  <div key={index} className='mb-2'>
+                    {message}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className='fixed inset-0 flex items-center justify-center'>
+              <div className='bg-red-500 text-white px-4 py-2 rounded'>
+                {error}
+              </div>
+            </div>
+          )}
+          {/* 
       {message && <div className='text-green-500'>{message}</div>}
       {error && <div className='text-red-500'>{error}</div>} */}
-     </div>
-   );
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default ImageUpload;

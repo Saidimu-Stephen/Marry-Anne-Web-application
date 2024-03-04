@@ -17,17 +17,12 @@ export async function saveMinorImages(selectedRoomName, minorImages) {
     // Save the minor image object to the database
     await minorImageObject.save();
 
-    // console.log("Minor image saved successfully");
-
-    return NextResponse.json({
-      success: true,
-      message: "Minor image saved successfully",
-    });
+    // Return success response without a message
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error saving minor image:", error.message);
-    return NextResponse.json({
-      success: false,
-      message: "Unable to save minor image",
-    });
+
+    // Return failure response without a message
+    return NextResponse.json({ success: false });
   }
 }

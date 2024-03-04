@@ -34,7 +34,7 @@ function Page(props) {
           throw new Error("Failed to fetch rooms");
         }
         const data = await response.json();
-        console.log(data);
+
         setRooms(data);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -56,7 +56,6 @@ function Page(props) {
     // Set the selected room details
     setSelectedRoomDetails(selectedRoom);
 
-    console.log("selected room", selectedRoom);
     setSelectedRoomName(selectedRoom.roomName);
   };
   return (
@@ -123,6 +122,11 @@ function Page(props) {
                       </div>
                     </div>
                   ))}
+                <div className='flex flex-col justify-center p-2'>
+                  <button className='text text-xl px-2 py-2 bg-red-300 hover:bg-red-600  rounded-lg'>
+                    Delete
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -1,9 +1,15 @@
 /** @format */
 
 import connectDB from "@/app/lib/mongodb";
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { saveMainImage } from "../../services/mainImageService";
+import MainImage from "@/app/models/mainImageModel";
+
+import MinorImage from "../../models/minorImageModel";
+
 import { saveMinorImages } from "../../services/minorImageService";
+// import MainImage from "../models/mainImageModel";
 
 export async function POST(req) {
   try {
@@ -12,47 +18,29 @@ export async function POST(req) {
     const { selectedRoomName, mainImage, minorImages } = await req.json();
 
     // Save the main image
-    const mainImageResponse = await saveMainImage(selectedRoomName, mainImage);
-
-    // save the minor image
-    const minorImageResponse = await saveMinorImages(
+    const mainImageResponse = await MainImage.create({
       selectedRoomName,
-      minorImages
-    );
+      mainImage,
+    });
 
-    // Gather all responses and messages
-    const responses = [mainImageResponse, minorImageResponse];
-    const messages = responses.map((response) => response.message);
+    // Save the minor images
+    const minorImageObject = new MinorImage({
+      selectedRoomName,
+      minorImages,
+    });
+    await minorImageObject.save();
 
-    // Check if any response indicates failure
-    const hasFailure = responses.some((response) => !response.success);
-
-    // Return appropriate response to the frontend
-    if (hasFailure) {
-      return NextResponse.json({ messages });
-    } else {
-      return NextResponse.json({
-        messages: [...messages, "Images saved successfully"],
-      });
+    // Check if both main image and minor images saving failed
+    if (!mainImageResponse) {
+      // Handle the case where main image saving failed
+      return NextResponse.json({ messages: ["Failed to save main image."] });
+    } else if (!minorImageObject) {
+      // Handle the case where minor images saving failed
+      return NextResponse.json({ messages: ["Failed to save minor images."] });
     }
 
-    // if (!mainImageResponse.success) {
-    //   // If saving the main image failed, return the error response
-    //   return NextResponse.json({
-    //     message: mainImageResponse.message,
-    //   });
-    // }
-    // if (!minorImageResponse.success) {
-    //   // If saving the minor images failed, return the error response
-    //   return NextResponse.json({
-    //     message: minorImageResponse.message,
-    //   });
-    // }
-
-    // // Both main and minor images were saved successfully
-    // return NextResponse.json({
-    //   message: "Images saved successfully",
-    // });
+    // All images saved successfully
+    return NextResponse.json({ messages: ["Images saved successfully."] });
   } catch (error) {
     console.error("Error:", error.message);
 
@@ -75,27 +63,3 @@ export async function POST(req) {
     }
   }
 }
-
-
-//catch (error) {
-//     console.error("Error:", error.message);
-
-//     // Handle different types of errors
-//     if (error instanceof mongoose.Error.ValidationError) {
-//       let errorList = [];
-//       for (let e in error.errors) {
-//         errorList.push(error.errors[e].message);
-//       }
-//       console.log(errorList);
-//       return NextResponse.json({ message: errorList });
-//     } else if (error instanceof mongoose.Error.CastError) {
-//       return NextResponse.json({ message: "Invalid ID provided." });
-//     } else if (error.code === 11000 || error.code === 11001) {
-//       return NextResponse.json({ message: "Duplicate key error." });
-//     } else if (error.code === 11600) {
-//       return NextResponse.json({ message: "Chunk error." });
-//     } else {
-//       return NextResponse.json({ message: "Unable to save images." });
-//     }
-//   }
-// }
