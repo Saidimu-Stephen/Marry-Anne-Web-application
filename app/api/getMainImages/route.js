@@ -1,8 +1,7 @@
 /** @format */
 
 import connectDB from "@/app/lib/mongodb";
-// import Apartment from "../../models/apartment"; // Assuming your model is named "Apartment"
-import Room from "../../models/roomDetails";
+import MainImage from "../../models/mainImageModel";
 import { NextResponse } from "next/server";
 
 export async function GET(req) {
@@ -11,9 +10,9 @@ export async function GET(req) {
       await connectDB(); // Ensure database connection
 
       // Fetch all apartment details from the database
-      const rooms = await Room.find({});
+      const mainImage = await MainImage.find({});
 
-      return NextResponse.json(rooms); // Return fetched data as JSON response
+      return NextResponse.json(mainImage); // Return fetched data as JSON response
     } catch (error) {
       console.error(error);
       return NextResponse.json({ msg: "Internal Server Error" }); // Return error response
