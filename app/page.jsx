@@ -1,7 +1,7 @@
 /** @format */
 
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
 import CloseIcon from "@mui/icons-material/Close";
@@ -313,7 +313,7 @@ const BookNowButton = ({ roomName, apartmentName }) => {
       <button
         className='px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition duration-300'
         onClick={handleButtonClick}>
-        Book now
+        Check availabilty
       </button>
       <DatePopup
         isOpen={isPopupOpen}
@@ -335,45 +335,144 @@ const BookNowButton = ({ roomName, apartmentName }) => {
 const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
   // State variables
   const [selectedDate, setSelectedDate] = useState(new Date());
+  // contains all the booked dates from the databsee
   const [bookedDates, setBookedDates] = useState([]);
-  const [myBookingDates, setMyBookingDates] = useState([]);
+  // contains all the dates that i want to book
+  const [myBookingDates, setMyBookingDates] = useState(null);
   const [checkInDate, setCheckInDate] = useState(null);
   const [checkOutDate, setCheckOutDate] = useState(null);
   const [showMessage, setShowMessage] = useState(false);
   const [attemptedBooking, setAttemptedBooking] = useState(false);
   const [bookingResponse, setBookingResponse] = useState(null);
+  const [currentRoomName, setCurrentRoomName] = useState(null);
+  const [currentBookedDates, setCurrentBookedDates] = useState([]);
 
   const [bookimgInformation, setBookingInformation] = useState([]);
+
+  function checkConflictingDates(myBookingDates, bookedDates) {
+    const conflictingDates = [];
+
+    // Iterate through each date in myBookingDates
+    for (const myDate of myBookingDates) {
+      // Check if the current date exists in bookedDates
+      if (bookedDates.includes(myDate)) {
+        conflictingDates.push(myDate);
+      }
+    }
+
+    return conflictingDates;
+  }
+  // Function to handle booking
+  const handleBook = async () => {
+    setAttemptedBooking(true);
+
+    if (!checkInDate || !checkOutDate || !roomName) {
+      setShowMessage(true);
+      setTimeout(() => setShowMessage(false), 5000);
+      return;
+    }
+
+    checkConflictingDates();
+    if (conflictingDates) {
+      setBookingResponse(false);
+    }
+
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          checkInDate,
+          checkOutDate,
+          roomName,
+          myBookingDates,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to book date");
+      }
+
+      // Update bookedDates state with the newly booked date
+      // Set the booking response state
+      const data = await res.json();
+
+      setBookingResponse(data);
+    } catch (error) {
+      console.error("Error booking date:", error);
+    }
+  };
+  //Function to get all the booked dates from the database
+  useEffect(() => {
+    if (isOpen && bookimgInformation) {
+      const allBookedDates = bookimgInformation.reduce((dates, booking) => {
+        // Convert each date string to a Date object
+        const datesAsObjects = booking.bookedDates.map(
+          (dateString) => new Date(dateString)
+        );
+
+        // Concatenate the array of Date objects
+        return dates.concat(datesAsObjects);
+      }, []);
+      setBookedDates(allBookedDates);
+    }
+  }, [isOpen, bookimgInformation]);
+
+  //
+  function filterBookedDatesByMonth(selectedDate, bookedDates) {
+    const selectedMonth = selectedDate.getMonth();
+    const selectedYear = selectedDate.getFullYear();
+
+    const filteredDates = bookedDates.filter((bookedDate) => {
+      const bookedMonth = bookedDate.getMonth();
+      const bookedYear = bookedDate.getFullYear();
+      return bookedMonth === selectedMonth && bookedYear === selectedYear;
+    });
+
+    return filteredDates;
+  }
+
+  useEffect(() => {
+    const filteredDates = filterBookedDatesByMonth(selectedDate, bookedDates);
+    setCurrentBookedDates(filteredDates);
+  }, [selectedDate, bookedDates]); // Dependency array
+
+  //
+
+  //
 
   // function to get all the booked dates in the database
   useEffect(() => {
     const fetchBookedDates = async () => {
       try {
-        console.log(roomName);
-        const response = await fetch("/api/getBookedDates", {
-          method: "POST",
-          headers: {
-            "Content-Type": "Application/json",
-          },
-          body: JSON.stringify({
-            roomName,
-          }),
-        });
+        if (isOpen) {
+          const response = await fetch("/api/getBookedDates", {
+            method: "POST",
+            headers: {
+              "Content-Type": "Application/json",
+            },
+            body: JSON.stringify({
+              roomName,
+            }),
+          });
 
-        if (!response.ok) {
-          throw error("Failed to fatch booked dates");
+          if (!response.ok) {
+            throw error("Failed to fetch booked dates");
+          }
+          const data = await response.json();
+          setBookingInformation(data);
         }
-        const data = await response.json();
-        setBookingInformation(data);
       } catch (error) {
         console.error("Error fetching bookings information:", error);
       }
     };
 
     fetchBookedDates();
-  }, [roomName]);
+  }, [isOpen, roomName]);
 
-  // fuction to manipulate all the dates between that are booked
+  // fuction to manipulate all the dates between that are booked// function to manipulate all the dates between that are booked
   const addBookedDatesBetween = (startDate, endDate) => {
     const datesToAdd = [new Date(startDate)]; // Include checkInDate at the beginning
     const currentDate = new Date(startDate);
@@ -391,6 +490,13 @@ const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
 
     setMyBookingDates(datesToAdd);
   };
+
+  useEffect(() => {
+    // Call addBookedDatesBetween whenever checkInDate or checkOutDate changes
+    if (checkInDate && checkOutDate) {
+      addBookedDatesBetween(checkInDate, checkOutDate);
+    }
+  }, [, isOpen, checkInDate, checkOutDate]);
 
   // Call addBookedDatesBetween whenever checkInDate or checkOutDate changes
   useEffect(() => {
@@ -443,43 +549,6 @@ const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
     setSelectedDate(newDate);
   };
 
-  // Function to handle booking
-  const handleBook = async () => {
-    setAttemptedBooking(true);
-
-    if (!checkInDate || !checkOutDate || !roomName) {
-      setShowMessage(true);
-      setTimeout(() => setShowMessage(false), 5000);
-      return;
-    }
-    try {
-      const res = await fetch("/api/bookings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          checkInDate,
-          checkOutDate,
-          roomName,
-          myBookingDates,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to book date");
-      }
-
-      // Update bookedDates state with the newly booked date
-      // Set the booking response state
-      const data = await res.json();
-
-      setBookingResponse(data);
-    } catch (error) {
-      console.error("Error booking date:", error);
-    }
-  };
-
   // Get today's date
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -494,57 +563,45 @@ const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
       {bookingResponse && (
         <div className='fixed inset-0 z-50 flex justify-center items-center'>
           <div className='bg-black bg-opacity-50 absolute inset-0'></div>
-          <div className='bg-white  flex-row justify-center border-green-400 p-8 rounded-lg relative'>
-            <div className='flex flex-row justify-center'>
-              <h2 className='text-xl  text-gray-500 font-bold mb-4'>
-                Booking Response
-              </h2>
-            </div>
-            <div className='flex flex-row justify-center '>
-              <p className='text-3xl font-serif font-semibold'>
-                {bookingResponse.success
-                  ? "Booking successful"
-                  : "Booking failed"}
-              </p>
-            </div>
-            <div className='flex flex-row justify-center '>
-              {" "}
-              <button
-                className='px-4 py-2 mt-4 font- semibold text-xl bg-green-500 hover:bg-green-700 text-white rounded'
-                onClick={() => setBookingResponse(null)}>
-                Close
-              </button>
-            </div>
+          <div className='bg-white flex flex-col justify-center items-center border-green-400 p-8 rounded-lg relative'>
+            <h2 className='text-xl text-gray-500 font-bold mb-4'>
+              Booking Response
+            </h2>
+            <p className='text-3xl font-serif font-semibold'>
+              {bookingResponse.success
+                ? "Booking successful"
+                : "Booking failed"}
+            </p>
+            <button
+              className='px-4 py-2 mt-4 font-semibold text-xl bg-green-500 hover:bg-green-700 text-white rounded'
+              onClick={() => setBookingResponse(null)}>
+              Close
+            </button>
           </div>
         </div>
       )}
 
-      {/*  */}
-      <div className='relative bg-white  mt-10 p-8 rounded-lg w-full max-w-screen-md'>
+      <div className='relative bg-white mt-10 p-8 rounded-lg w-full max-w-screen-md'>
         {/* Close button */}
-        <div className='p-2 m-2'></div>
-        <div className=' flex justify-end '>
+        <div className='absolute top-0 right-0 m-4'>
           <button
-            className=' right-2 pt-4 px-2 py-2 bg-red-500 text-white rounded'
+            className='px-2 py-1 bg-red-500 text-white rounded'
             onClick={onClose}>
             Close
           </button>
         </div>
         {/* Title */}
-
         <div className='flex justify-center'>
           <h1 className='text-4xl font-serif font-bold text-blue-500 leading-tight mb-4 text-center'>
             {apartmentName}
           </h1>
         </div>
-
         <div className='flex justify-center'>
           <h1 className='text-2xl font-serif font-bold text-blue-500 leading-tight mb-4 text-center'>
             {roomName}
           </h1>
         </div>
         <div>
-          {" "}
           <h2 className='text-2xl font-bold mb-4'>
             {selectedDate.toLocaleString("default", {
               month: "long",
@@ -565,152 +622,137 @@ const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
             Next Month
           </button>
         </div>
-
         {/* Check-In and Check-Out sections */}
-        <div className=' flex-auto pt-2'>
-          <div className=' flex  justify-between w-full flex-row p-8 gap-4'>
-            {/* Check-In section */}
-            <div
-              className='border rounded-md'
-              onClick={() => setCheckInDate(selectedDate)}>
-              <h1 className='text-2xl font-semibold'>Check-In</h1>
-              <input
-                type='date'
-                value={
-                  checkInDate ? checkInDate.toISOString().split("T")[0] : ""
-                }
-                onChange={(e) => setCheckInDate(new Date(e.target.value))}
-                // disabled={checkInDate !== null}
-              />
-            </div>
-            {/* Check-Out section */}
-            <div
-              className='border rounded-md'
-              onClick={() => setCheckOutDate(selectedDate)}>
-              <h1 className='text font-semibold text-2xl'>Check-Out</h1>
-              <input
-                type='date'
-                value={
-                  checkOutDate ? checkOutDate.toISOString().split("T")[0] : ""
-                }
-                onChange={(e) => setCheckOutDate(new Date(e.target.value))}
-                // disabled={checkOutDate !== null}
-              />
-            </div>
+        <div className='flex flex-col lg:flex-row items-center lg:items-start justify-between w-full mt-4 gap-4'>
+          {/* Check-In section */}
+          <div className='border rounded-md'>
+            <h1 className='text-2xl font-semibold'>Check-In</h1>
+            <input
+              type='date'
+              value={checkInDate ? checkInDate.toISOString().split("T")[0] : ""}
+              onChange={(e) => setCheckInDate(new Date(e.target.value))}
+            />
           </div>
-
-          {/* Calendar */}
-          <div className='flex flex-col items-center mt-4'>
-            <div className='grid grid-cols-7 gap-2'>
-              {/* Render days of the week */}
-              {[...Array(7)].map((_, index) => (
-                <div className='text-center font-semibold' key={index}>
-                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][index]}
-                </div>
-              ))}
-              {/* Render dates of the month */}
-              {[
-                ...Array(getCurrentMonthDates(selectedDate).endDate.getDate()),
-              ].map((_, index) => {
-                const currentDate = index + 1;
-                const isCurrentMonth =
-                  selectedDate.getMonth() === new Date().getMonth();
-                const isCurrentDate =
-                  isCurrentMonth && currentDate === new Date().getDate();
-                const isBookedDate = bookedDates.some(
-                  (date) => date.getDate() === currentDate
-                );
-                const isPastDate =
-                  new Date(
-                    selectedDate.getFullYear(),
-                    selectedDate.getMonth(),
-                    currentDate
-                  ) < today;
-                const isSelectedDate =
-                  checkInDate &&
-                  checkOutDate &&
-                  new Date(
-                    selectedDate.getFullYear(),
-                    selectedDate.getMonth(),
-                    currentDate
-                  ) >= checkInDate &&
-                  new Date(
-                    selectedDate.getFullYear(),
-                    selectedDate.getMonth(),
-                    currentDate
-                  ) <= checkOutDate;
-                // Render each date cell
+          {/* Check-Out section */}
+          <div className='border rounded-md'>
+            <h1 className='text-2xl font-semibold'>Check-Out</h1>
+            <input
+              type='date'
+              value={
+                checkOutDate ? checkOutDate.toISOString().split("T")[0] : ""
+              }
+              onChange={(e) => setCheckOutDate(new Date(e.target.value))}
+            />
+          </div>
+        </div>
+        {/* Calendar */}
+        <div className='flex flex-col items-center mt-4'>
+          <div className='grid grid-cols-7 w-full gap-2'>
+            {Array.from({
+              length: getCurrentMonthDates(selectedDate).endDate.getDate(),
+            }).map((_, index) => {
+              const currentDate = index + 1;
+              const isCurrentMonth =
+                selectedDate.getMonth() === new Date().getMonth();
+              const isCurrentDate =
+                isCurrentMonth && currentDate === new Date().getDate();
+              //
+              const isBookedDate = currentBookedDates.some((bookedDate) => {
                 return (
-                  <div
-                    className={`text-center border border-gray-200 p-2 ${
-                      isCurrentDate
-                        ? "bg-blue-800"
-                        : isBookedDate
-                        ? "bg-gray-300"
-                        : ""
-                    } ${isPastDate ? "line-through text-gray-400" : ""} ${
-                      isSelectedDate ? "bg-green-100" : ""
-                    }`}
-                    key={index}
-                    onClick={() => {
-                      if (!checkInDate) {
-                        setCheckInDate(
-                          new Date(
-                            selectedDate.getFullYear(),
-                            selectedDate.getMonth(),
-                            currentDate
-                          )
-                        );
-                      } else if (
-                        !checkOutDate &&
-                        checkInDate <
-                          new Date(
-                            selectedDate.getFullYear(),
-                            selectedDate.getMonth(),
-                            currentDate
-                          )
-                      ) {
-                        setCheckOutDate(
-                          new Date(
-                            selectedDate.getFullYear(),
-                            selectedDate.getMonth(),
-                            currentDate
-                          )
-                        );
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}>
-                    {currentDate}
-                  </div>
+                  bookedDate.getFullYear() === selectedDate.getFullYear() &&
+                  bookedDate.getMonth() === selectedDate.getMonth() &&
+                  bookedDate.getDate() === currentDate
                 );
-              })}
-            </div>
+              });
+              const isPastDate =
+                selectedDate.getMonth() === today.getMonth() &&
+                selectedDate.getFullYear() === today.getFullYear() &&
+                new Date(
+                  selectedDate.getFullYear(),
+                  selectedDate.getMonth(),
+                  currentDate
+                ) < today;
+              //
+              const isSelectedDate =
+                checkInDate &&
+                checkOutDate &&
+                new Date(
+                  selectedDate.getFullYear(),
+                  selectedDate.getMonth(),
+                  currentDate
+                ) >= checkInDate &&
+                new Date(
+                  selectedDate.getFullYear(),
+                  selectedDate.getMonth(),
+                  currentDate
+                ) <= checkOutDate;
 
-            {/* Book button */}
-            <div>
-              {!checkInDate && attemptedBooking && (
-                <p className='text-red-500'>Please select a check-in date.</p>
-              )}
-              {!checkOutDate && attemptedBooking && (
-                <p className='text-red-500'>Please select a check-out date.</p>
-              )}
-              {!roomName && attemptedBooking && (
-                <p className='text-red-500'>Please select a room.</p>
-              )}
-              {showMessage && (
-                <p className='text-red-500'>Please select a room.</p>
-              )}
-
-              <button
-                className='px-4 py-2 mt-4 bg-green-500 hover:bg-green-700 text-white rounded'
-                onClick={() => {
-                  handleBook();
-                }}
-                // disabled={!checkInDate || !roomName || !checkOutDate} // Disable the button if check-in, room name, or check-out dates are not selected
-              >
-                Book
-              </button>
-            </div>
+              return (
+                <div
+                  key={index}
+                  className={`text-center border border-gray-200 p-2 ${
+                    isCurrentDate
+                      ? "bg-blue-800 text text-black font-bold text-2xl"
+                      : ""
+                  } ${isPastDate ? "line-through text-gray-400" : ""} ${
+                    isSelectedDate ? "bg-green-200" : ""
+                  } ${isBookedDate ? "bg-red-200" : ""}`}
+                  onClick={() => {
+                    if (!checkInDate) {
+                      setCheckInDate(
+                        new Date(
+                          selectedDate.getFullYear(),
+                          selectedDate.getMonth(),
+                          currentDate
+                        )
+                      );
+                    } else if (
+                      !checkOutDate &&
+                      checkInDate <
+                        new Date(
+                          selectedDate.getFullYear(),
+                          selectedDate.getMonth(),
+                          currentDate
+                        )
+                    ) {
+                      setCheckOutDate(
+                        new Date(
+                          selectedDate.getFullYear(),
+                          selectedDate.getMonth(),
+                          currentDate
+                        )
+                      );
+                    }
+                  }}
+                  style={{
+                    cursor:
+                      isBookedDate || isPastDate ? "not-allowed" : "pointer",
+                  }}>
+                  {currentDate}
+                </div>
+              );
+            })}
+          </div>
+          {/* Book button */}
+          <div className='mt-4'>
+            {!checkInDate && attemptedBooking && (
+              <p className='text-red-500'>Please select a check-in date.</p>
+            )}
+            {!checkOutDate && attemptedBooking && (
+              <p className='text-red-500'>Please select a check-out date.</p>
+            )}
+            {!roomName && attemptedBooking && (
+              <p className='text-red-500'>Please select a room.</p>
+            )}
+            {showMessage && (
+              <p className='text-red-500'>Please select a room.</p>
+            )}
+            <button
+              className='px-4 py-2 mt-4 bg-green-500 hover:bg-green-700 text-white rounded'
+              onClick={handleBook}
+              disabled={!checkInDate || !checkOutDate || !roomName}>
+              Book
+            </button>
           </div>
         </div>
       </div>
