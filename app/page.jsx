@@ -5,7 +5,7 @@ import React, { use, useEffect, useState } from "react";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
 import CloseIcon from "@mui/icons-material/Close";
-import { Types } from "mongoose";
+import PopupMessage from "@/app/Components/PopupMessage";
 
 function Page() {
   const [availableApartments, setAvailableApartments] = useState([]);
@@ -338,43 +338,104 @@ const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
   // contains all the booked dates from the databsee
   const [bookedDates, setBookedDates] = useState([]);
   // contains all the dates that i want to book
-  const [myBookingDates, setMyBookingDates] = useState(null);
+  const [myBookingDates, setMyBookingDates] = useState([]);
   const [checkInDate, setCheckInDate] = useState(null);
   const [checkOutDate, setCheckOutDate] = useState(null);
-  const [showMessage, setShowMessage] = useState(false);
-  const [attemptedBooking, setAttemptedBooking] = useState(false);
+
+  const [message, setMessage] = useState("");
+  const [showMessage, setShowMessage] = useState(null);
+  const [attemptedBooking, setAttemptedBooking] = useState(null);
   const [bookingResponse, setBookingResponse] = useState(null);
   const [currentRoomName, setCurrentRoomName] = useState(null);
   const [currentBookedDates, setCurrentBookedDates] = useState([]);
 
   const [bookimgInformation, setBookingInformation] = useState([]);
 
-  function checkConflictingDates(myBookingDates, bookedDates) {
-    const conflictingDates = [];
+  const handleCloseMessage = () => {
+    setShowMessage(false);
+  };
 
-    // Iterate through each date in myBookingDates
-    for (const myDate of myBookingDates) {
-      // Check if the current date exists in bookedDates
-      if (bookedDates.includes(myDate)) {
-        conflictingDates.push(myDate);
+  function compareDateArrays(dates1, dates2) {
+    const matchingDates = [];
+
+    // Iterate through each date in the first array
+    dates1.forEach((date1) => {
+      // Check if the date exists in the second array
+      if (dates2.some((date2) => date1.getTime() === date2.getTime())) {
+        // Add the matching date to the result array
+        matchingDates.push(date1);
       }
-    }
+    });
 
-    return conflictingDates;
+    return matchingDates;
   }
-  // Function to handle booking
+
   const handleBook = async () => {
     setAttemptedBooking(true);
-
-    if (!checkInDate || !checkOutDate || !roomName) {
+    // Ensure that check-in date is available
+    if (!checkInDate) {
       setShowMessage(true);
+      setMessage("Check In Date is missing!!");
       setTimeout(() => setShowMessage(false), 5000);
       return;
     }
 
-    checkConflictingDates();
-    if (conflictingDates) {
-      setBookingResponse(false);
+    // Ensure that check-out date is available
+    if (!checkOutDate) {
+      setShowMessage(true);
+      setMessage("Check Out Date is missing!!");
+      setTimeout(() => setShowMessage(false), 5000);
+      return;
+    }
+
+    if (!myBookingDates) {
+      setShowMessage(true);
+      setMessage("You have not set bookig dates yet");
+      setTimeout(() => setShowMessage(false), 5000);
+      return;
+    }
+
+    if (bookedDates) {
+      // Check for conflicting dates
+
+      const matchingDates = compareDateArrays(myBookingDates, bookedDates);
+
+      if (matchingDates.length > 0) {
+        const formattedDates = matchingDates.map((date) =>
+          date.toLocaleDateString()
+        ); // Use toLocaleDateString for user-friendly format
+        setShowMessage(true);
+        setMessage(`Date(s) already booked!! ${formattedDates.join(", ")}`);
+        setTimeout(() => setShowMessage(false), 5000);
+        return;
+      } else {
+        try {
+          const res = await fetch("/api/bookings", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              checkInDate,
+              checkOutDate,
+              roomName,
+              myBookingDates,
+            }),
+          });
+
+          if (!res.ok) {
+            throw new Error("Failed to book date");
+          }
+
+          // Update bookedDates state with the newly booked date
+          // Set the booking response state
+          const data = await res.json();
+
+          setBookingResponse(data);
+        } catch (error) {
+          console.error("Error booking date:", error);
+        }
+      }
     }
 
     try {
@@ -476,26 +537,21 @@ const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
   const addBookedDatesBetween = (startDate, endDate) => {
     const datesToAdd = [new Date(startDate)]; // Include checkInDate at the beginning
     const currentDate = new Date(startDate);
+    const newEndDate = new Date(endDate); // Create a new Date object from endDate
+    newEndDate.setDate(newEndDate.getDate() + 1); // Increment endDate by one day
 
     // Add all dates between checkInDate and checkOutDate
-    while (currentDate < endDate) {
+    while (currentDate < newEndDate) {
       currentDate.setDate(currentDate.getDate() + 1);
       datesToAdd.push(new Date(currentDate));
     }
-
-    // Include checkOutDate at the end if it's different from checkInDate
-    if (startDate.getTime() !== endDate.getTime()) {
-      datesToAdd.push(new Date(endDate));
-    }
-
     setMyBookingDates(datesToAdd);
   };
 
   useEffect(() => {
     // Call addBookedDatesBetween whenever checkInDate or checkOutDate changes
-    if (checkInDate && checkOutDate) {
-      addBookedDatesBetween(checkInDate, checkOutDate);
-    }
+
+    addBookedDatesBetween(checkInDate, checkOutDate);
   }, [, isOpen, checkInDate, checkOutDate]);
 
   // Call addBookedDatesBetween whenever checkInDate or checkOutDate changes
@@ -556,7 +612,7 @@ const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
   // Return JSX
   return (
     <div
-      className={`fixed inset-0 z-50 p-4 overflow-y-auto pt-8 bg-black bg-opacity-99 flex justify-center items-center ${
+      className={`w-screen fixed h-screen inset-0 z-50 p-4 overflow-y-auto pt-8 bg-blue-300 bg-opacity-100 flex justify-center items-center ${
         isOpen ? "" : "hidden"
       }`}>
       {/* Booking response display */}
@@ -572,6 +628,7 @@ const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
                 ? "Booking successful"
                 : "Booking failed"}
             </p>
+
             <button
               className='px-4 py-2 mt-4 font-semibold text-xl bg-green-500 hover:bg-green-700 text-white rounded'
               onClick={() => setBookingResponse(null)}>
@@ -579,6 +636,10 @@ const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
             </button>
           </div>
         </div>
+      )}
+
+      {showMessage && (
+        <PopupMessage message={message} onClose={handleCloseMessage} />
       )}
 
       <div className='relative bg-white mt-10 p-8 rounded-lg w-full max-w-screen-md'>
@@ -735,22 +796,9 @@ const DatePopup = ({ isOpen, onClose, roomName, apartmentName }) => {
           </div>
           {/* Book button */}
           <div className='mt-4'>
-            {!checkInDate && attemptedBooking && (
-              <p className='text-red-500'>Please select a check-in date.</p>
-            )}
-            {!checkOutDate && attemptedBooking && (
-              <p className='text-red-500'>Please select a check-out date.</p>
-            )}
-            {!roomName && attemptedBooking && (
-              <p className='text-red-500'>Please select a room.</p>
-            )}
-            {showMessage && (
-              <p className='text-red-500'>Please select a room.</p>
-            )}
             <button
               className='px-4 py-2 mt-4 bg-green-500 hover:bg-green-700 text-white rounded'
-              onClick={handleBook}
-              disabled={!checkInDate || !checkOutDate || !roomName}>
+              onClick={handleBook}>
               Book
             </button>
           </div>
