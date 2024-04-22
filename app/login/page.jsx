@@ -37,18 +37,27 @@ const Login = () => {
 
       if (success) {
         // Redirect or perform action upon successful login
+
+        // Set expiry time (30 minutes in milliseconds)
+        const expiryTime = Date.now() + 1000 * 60 * 30;
+        // Store userData and expiry in a single object
+        const dataWithExpiry = {
+          userData,
+          expiry: expiryTime,
+        };
+
         // Reset fields if needed
         setUsername("");
         setPassword("");
         setShowPopup(true);
         setTimeout(() => {
           setShowPopup(false); // Hide the error popup after 5 seconds
+          // Store userData in local storage
+          localStorage.setItem("userData", JSON.stringify(dataWithExpiry));
+          localStorage.setItem("token", JSON.stringify(token));
+
           router.push("/");
         }, 5000); // Replace "/homepage" with your homepage route
-        // console.log(msg, success, userData, token);
-        // Assuming 'token' is received in the login response
-        localStorage.setItem("token", token);
-        console.log("local storage", localStorage);
       } else {
         // Handle login failure and display error message
         setIsSuccess(false); // Set isSuccess to false for error messages

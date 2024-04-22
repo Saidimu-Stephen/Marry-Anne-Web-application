@@ -34,7 +34,8 @@
     "app/login/page.jsx",
     "app/SideBar/SideBar.jsx",
     "app/login/page.jsx",
-    "app/page.jsx"
+    "app/page.jsx",
+    "app/Header/Header.tsx"
   ],
   "exclude": ["node_modules"]
 }

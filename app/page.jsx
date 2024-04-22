@@ -6,6 +6,7 @@ import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
 import CloseIcon from "@mui/icons-material/Close";
 import PopupMessage from "@/app/Components/PopupMessage";
+import { useRouter } from "next/navigation";
 
 function Page() {
   const [availableApartments, setAvailableApartments] = useState([]);
@@ -17,7 +18,67 @@ function Page() {
   const [minorImages, setMinorImages] = useState([]);
   const [roomName, setRoomName] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0); // Add currentImageIndex state
+  const [userData, setUserData] = useState(null);
+  const [token, setToken] = useState(null);
+  const router = useRouter();
 
+  useEffect(() => {
+    const storedData = localStorage.getItem("userData");
+    const storedToken = localStorage.getItem("token");
+    if (storedData && storedData) {
+      setUserData(JSON.parse(storedData));
+
+      setToken(JSON.parse(storedToken));
+    }
+  }, []);
+
+  // function to track time
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // User is active, reset the timer
+        const remainingTime = localStorage.getItem("userData")
+          ? JSON.parse(localStorage.getItem("userData")).expiry - Date.now()
+          : 0;
+        if (remainingTime > 0) {
+          let timeoutId; // Declare timeoutId here
+
+          timeoutId = setTimeout(() => {
+            localStorage.removeItem("token");
+            localStorage.removeItem("userData");
+            // Optionally handle redirect to login or display a message
+          }, remainingTime);
+
+          // Cleanup function to clear timeout on unmount
+          return () => {
+            clearTimeout(timeoutId); // Clear timeout here using the stored timeoutId
+          };
+        }
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () =>
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  //
+
+  useEffect(() => {
+    checkForTokenAndRedirect();
+  }, [token]);
+
+  // function to ridirect the user to login page after the token has expired
+  const checkForTokenAndRedirect = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login"); // Replace "/login" with your actual login route
+    }
+  };
+
+  // create a fu
   useEffect(() => {
     fetch("api/getMainImages")
       .then((response) => {
