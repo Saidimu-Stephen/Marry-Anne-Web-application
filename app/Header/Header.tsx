@@ -5,11 +5,10 @@ import React, { useEffect } from "react";
 import { useState } from "react";
 import UserProfile from "@/app/Components/userProfile";
 import { useRouter } from "next/router"; // Importing the useRouter hook from Next.js
+import UserProfileWrapper from "../Components/UserProfileWrapper";
 
 function Header() {
   const [isOpen, setIsOpen] = useState(false); // State variable to manage the open/close state of the mobile menu
-
-   
 
   const toggleMenu = () => {
     setIsOpen(!isOpen); // Function to toggle the menu state
@@ -105,7 +104,7 @@ function Header() {
             </li>
 
             <li>
-              <UserProfile />
+              <UserProfileWrapper />
             </li>
           </ul>
         </nav>
@@ -120,6 +119,10 @@ function Header() {
             className='lg:hidden absolute top-4 right-4 bg-slate-400 w-20 p-2'>
             <div className='text-right'>
               <ul className='block border-t border-white pt-4'>
+                <li>
+                  <UserProfileWrapper />
+                  {/* <UserProfile onClick={(e) => e.stopPropagation()} /> */}
+                </li>
                 <li>
                   <a href='/' className='block py-2 hover:bg-gray-200'>
                     Home
@@ -141,9 +144,7 @@ function Header() {
                   </a>
                 </li>
 
-                <li>
-                  <h1>Stephen saidimu</h1>
-                </li>
+                <li></li>
               </ul>
             </div>
           </div>

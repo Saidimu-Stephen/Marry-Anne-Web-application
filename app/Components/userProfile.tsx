@@ -1,5 +1,14 @@
-/** @format */
+/**
+ * UserProfile Component
+ *
+ * This component displays the user profile information and provides functionality
+ * to interact with the user profile, such as logging out and closing the profile popup.
+ * It also receives a function as a prop to handle profile click events.
+ *
+ * @format
+ */
 
+import { useRouter } from "next/navigation"; // Import useRouter from Next.js
 import React, { useState, useRef, useEffect } from "react";
 import { VscAccount } from "react-icons/vsc";
 
@@ -11,13 +20,25 @@ interface UserData {
   lastName: string;
 }
 
+// Define props for the UserProfile component
+interface UserProfileProps {
+  onProfileClick: () => void; // Function to handle profile click events
+}
+
+// Define the structure of user data main
 interface UserDataMain {
   userData: UserData;
   expiry: number;
 }
 
-function UserProfile() {
-  const [isOpen, setIsOpen] = useState<Boolean>(false);
+/**
+ * UserProfile function
+ *
+ * @param {UserProfileProps} onProfileClick Function to handle profile click events.
+ * @returns {JSX.Element} The rendered UserProfile component.
+ */
+function UserProfile({ onProfileClick }: UserProfileProps) {
+  const [issOpen, setIsOpen] = useState<boolean>(false);
   const [userDataMain, setUserData] = useState<UserDataMain | null>(null);
   const [username, setUsername] = useState<string>("");
   const [email, setEmail] = useState<string>("");
@@ -25,44 +46,52 @@ function UserProfile() {
   const [lastName, setLastName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string>("");
+  const [loggedIn, setLoggedIn] = useState<boolean>(false); // Change Boolean to boolean
+
+  const router = useRouter();
 
   const popupRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * toggleDropdown function
+   *
+   * Toggles the user profile dropdown and calls the onProfileClick function.
+   */
   const toggleDropdown = () => {
-    setIsOpen(true);
-  };
-
-  useEffect(() => {
-    console.log(isOpen);
-  }, [isOpen]);
-
-  const handleClickOutside = (event: MouseEvent) => {
-    // if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
-    //   setIsOpen(false);
-    // }
-  };
-
-  useEffect(() => {
-    const handleClickInsidePopup = (event: MouseEvent) => {
-      event.stopPropagation(); // Prevent event propagation
-    };
-
-    if (popupRef.current) {
-      popupRef.current.addEventListener("click", handleClickInsidePopup);
+    if (loggedIn) {
+      setIsOpen((prevIsOpen) => !prevIsOpen);
+      onProfileClick();
     }
+  };
 
-    return () => {
-      if (popupRef.current) {
-        popupRef.current.removeEventListener("click", handleClickInsidePopup);
-      }
-    };
-  }, []);
-
+  // Effect hook to check if user data and token exist in local storage
   useEffect(() => {
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
+    const storedData = localStorage.getItem("userData");
+    const storedToken = localStorage.getItem("token");
+
+    if (storedData && storedToken) {
+      setUserData(JSON.parse(storedData));
+      setToken(storedToken);
+      setLoggedIn(true); // Set loggedIn to true if user data and token exist
+    } else {
+      setLoggedIn(false);
+      setIsOpen(false);
+      localStorage.removeItem("token");
+      localStorage.removeItem("userData");
+      router.push("/login");
+    }
   }, []);
 
+  // Effect hook to check if the user is logged in
+  useEffect(() => {
+    if (loggedIn) {
+      loadingStatus();
+    } else {
+      setIsLoading(false); // Set isLoading to false if not logged in
+    }
+  }, [loggedIn]);
+
+  // Effect hook to update user data when userDataMain changes
   useEffect(() => {
     if (userDataMain) {
       setUsername(userDataMain.userData.username);
@@ -70,86 +99,101 @@ function UserProfile() {
       setFirstName(userDataMain.userData.firstName);
       setLastName(userDataMain.userData.lastName);
     }
-
-    setIsLoading(false);
   }, [userDataMain]);
 
-  useEffect(() => {
-    const storedData = localStorage.getItem("userData");
-    const storedToken = localStorage.getItem("token");
-    if (storedData) {
-      setUserData(JSON.parse(storedData));
+  /**
+   * loadingStatus function
+   *
+   * Checks if all user data is loaded and updates isLoading state accordingly.
+   * Redirects to login page if user data is incomplete.
+   */
+  const loadingStatus = () => {
+    if (username && email && firstName && lastName) {
+      setIsLoading(false);
+    } else {
+      router.push("/login");
     }
+  };
 
-    if (storedToken) {
-      setToken(storedToken);
-    }
-
-    setIsLoading(false); // Data retrieval complete
-  }, []);
-
+  /**
+   * closeProfilePopUp function
+   *
+   * Closes the user profile popup.
+   */
   const closeProfilePopUp = () => {
-    setIsOpen(false); // Set the state variable to close the popup
+    setIsOpen(false);
+  };
+
+  /**
+   * logOut function
+   *
+   * Logs out the user by removing token and user data from local storage
+   * and redirects to the login page.
+   */
+  const logOut = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userData");
+    setLoggedIn(false);
+    setUserData(null);
+    setUsername("");
+    setEmail("");
+    setFirstName("");
+    setLastName("");
+    setIsOpen(false);
+    router.push("/login");
   };
 
   return (
-    <div className='   user-profile'>
+    <div className='user-profile'>
       {isLoading ? (
         <p>Loading user data...</p>
       ) : (
         <div className='user-profile'>
-          {/* Profile image (clickable VscAccount icon) */}
-          <div className='profile-image flex flex-col items-center '>
-            {!isOpen && (
-              <div>
-                {/* TODO:
-                
-                1. enable adding of profile image
-                2. toogle between user profile if there is image in the databse*/}
-                <VscAccount
-                  onClick={toggleDropdown}
-                  className='clickable hover:  text-2xl mb-2 cursor-pointer'
-                />
-              </div>
-            )}
+          <div className='profile-image flex flex-col items-center'>
+            <div>
+              <VscAccount
+                onClick={toggleDropdown}
+                className='clickable hover:text-blue-600 text-gray-800 text-3xl mb-4 cursor-pointer'
+              />
+            </div>
 
-            {/* Popup menu (conditional rendering) */}
-            {isOpen && (
+            {issOpen && (
               <div
-                className='fixed z-50 first:top-1 right-0 bg-gray-200 shadow-md rounded-md p-4'
-                ref={popupRef}
-                style={{
-                  border: "1px solid black",
-                  // backgroundColor: "lightgray",
-                }}>
+                className='fixed z-50 top-12 right-6 bg-white shadow-lg rounded-md p-6'
+                ref={popupRef}>
                 <div className='flex justify-center'>
-                  {" "}
                   <VscAccount
                     onClick={toggleDropdown}
-                    className='clickable hover: text-3xl mb-2 cursor-pointer'
+                    className='clickable hover:text-blue-600 text-gray-800 text-4xl mb-4 cursor-pointer'
                   />
                 </div>
-                <div
-                  className='flex
-               flex-col justify-center'>
-                  <div className='flex justify-center py-1'>
-                    <p className=' text-2xl font-extralight  mr-2'>
-                      {firstName}{" "}
+                <div className='flex flex-col justify-center items-center'>
+                  <div className='flex justify-center py-2'>
+                    <p className='text-xl text-gray-600 font-semibold mr-2'>
+                      {firstName}
                     </p>
-                    <p className=' text-2xl  font-extralight '>{lastName}</p>
+                    <p className='text-xl text-gray-600 font-semibold'>
+                      {lastName}
+                    </p>
                   </div>
-                  <p className='text-xl font-semibold '>{email}</p>
-
-                  <div className='flex pt-2 justify-center'>
+                  <p className='text-lg font-medium text-gray-600 mb-4'>
+                    {email}
+                  </p>
+                  <div className='flex justify-center'>
+                    <button
+                      onClick={logOut}
+                      className='bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75'>
+                      Log Out
+                    </button>
+                  </div>
+                  <div className='flex pt-4 justify-center'>
                     <button
                       onClick={closeProfilePopUp}
-                      className='bg-red-300 p-1 hover:bg-red-600 rounded-md'>
+                      className='bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75'>
                       Close
                     </button>
                   </div>
                 </div>
-
-                {/* Add more user information here */}
               </div>
             )}
           </div>
@@ -158,5 +202,4 @@ function UserProfile() {
     </div>
   );
 }
-
 export default UserProfile;
