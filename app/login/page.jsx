@@ -45,7 +45,7 @@ const Login = () => {
           userData,
           expiry: expiryTime,
         };
-
+const refreshed = "true";
         // Reset fields if needed
         setUsername("");
         setPassword("");
@@ -55,6 +55,7 @@ const Login = () => {
           // Store userData in local storage
           localStorage.setItem("userData", JSON.stringify(dataWithExpiry));
           localStorage.setItem("token", JSON.stringify(token));
+          localStorage.setItem("refreshed", refreshed);
 
           router.push("/");
         }, 5000); // Replace "/homepage" with your homepage route

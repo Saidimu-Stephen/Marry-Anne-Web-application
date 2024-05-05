@@ -21,64 +21,46 @@ function Page() {
   const [userData, setUserData] = useState(null);
   const [token, setToken] = useState(null);
   const router = useRouter();
+  const [refreshed, setRefreshed] = useState("");
 
   useEffect(() => {
     const storedData = localStorage.getItem("userData");
+    const refreshed = localStorage.getItem("refreshed");
     const storedToken = localStorage.getItem("token");
     if (storedData && storedData) {
       setUserData(JSON.parse(storedData));
 
       setToken(JSON.parse(storedToken));
+      // refreshedPage();
+    }
+
+    if (refreshed != null) {
+      setRefreshed(refreshed);
     }
   }, []);
 
-  // function to track time
-
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        // User is active, reset the timer
-        const remainingTime = localStorage.getItem("userData")
-          ? JSON.parse(localStorage.getItem("userData")).expiry - Date.now()
-          : 0;
-        if (remainingTime > 0) {
-          let timeoutId; // Declare timeoutId here
+    if (refreshed !== "") {
+      const timer = setTimeout(() => {
+        // Refresh the page
 
-          timeoutId = setTimeout(() => {
-            localStorage.removeItem("token");
-            localStorage.removeItem("userData");
-            // Optionally handle redirect to login or display a message
-          }, remainingTime);
+        checkRefresh();
 
-          // Cleanup function to clear timeout on unmount
-          return () => {
-            clearTimeout(timeoutId); // Clear timeout here using the stored timeoutId
-          };
-        }
-      }
-    };
+        window.location.reload();
+        // Mark as refreshed after reload
+      }, 3000);
 
-    window.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () =>
-      window.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, []);
-
-  //
-
-  useEffect(() => {
-    checkForTokenAndRedirect();
-  }, [token]);
-
-  // function to ridirect the user to login page after the token has expired
-  const checkForTokenAndRedirect = () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login"); // Replace "/login" with your actual login route
+      return () => {
+        clearTimeout(timer);
+      };
     }
+  }, [refreshed]); // Add refreshed as a dependency
+
+  const checkRefresh = () => {
+    console.log(refreshed); // This will log the current value of refreshed before updating the state
+    localStorage.removeItem("refreshed");
   };
 
-  // create a fu
   useEffect(() => {
     fetch("api/getMainImages")
       .then((response) => {

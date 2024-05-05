@@ -3,7 +3,6 @@
 
 import React, { useEffect } from "react";
 import { useState } from "react";
-import UserProfile from "@/app/Components/userProfile";
 import { useRouter } from "next/router"; // Importing the useRouter hook from Next.js
 import UserProfileWrapper from "../Components/UserProfileWrapper";
 

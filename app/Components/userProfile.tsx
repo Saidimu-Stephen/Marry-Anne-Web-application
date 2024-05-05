@@ -9,6 +9,8 @@
  */
 
 import { useRouter } from "next/navigation"; // Import useRouter from Next.js
+
+
 import React, { useState, useRef, useEffect } from "react";
 import { VscAccount } from "react-icons/vsc";
 
@@ -46,7 +48,9 @@ function UserProfile({ onProfileClick }: UserProfileProps) {
   const [lastName, setLastName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string>("");
-  const [loggedIn, setLoggedIn] = useState<boolean>(false); // Change Boolean to boolean
+  const [loggedIn, setLoggedIn] = useState<boolean>(false);
+  const [expiryTime, setExpiryTime] = useState<number>(0);
+  const [expiryTime11, setExpiryTime11] = useState<number>(0);
 
   const router = useRouter();
 
@@ -65,31 +69,32 @@ function UserProfile({ onProfileClick }: UserProfileProps) {
   };
 
   // Effect hook to check if user data and token exist in local storage
-  useEffect(() => {
-    const storedData = localStorage.getItem("userData");
-    const storedToken = localStorage.getItem("token");
 
-    if (storedData && storedToken) {
-      setUserData(JSON.parse(storedData));
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    const storedData = localStorage.getItem("userData");
+
+    if (storedToken) {
+      if (storedData) {
+        setUserData(JSON.parse(storedData));
+      }
+
       setToken(storedToken);
-      setLoggedIn(true); // Set loggedIn to true if user data and token exist
+
+      setLoggedIn(true); // Set loggedIn to true if token exists
     } else {
-      setLoggedIn(false);
-      setIsOpen(false);
-      localStorage.removeItem("token");
-      localStorage.removeItem("userData");
-      router.push("/login");
+      logOut();
     }
   }, []);
 
   // Effect hook to check if the user is logged in
   useEffect(() => {
-    if (loggedIn) {
-      loadingStatus();
-    } else {
-      setIsLoading(false); // Set isLoading to false if not logged in
+    if (username != "") {
+      setIsLoading(false);
+
+      console.log(username);
     }
-  }, [loggedIn]);
+  }, [username]);
 
   // Effect hook to update user data when userDataMain changes
   useEffect(() => {
@@ -98,28 +103,93 @@ function UserProfile({ onProfileClick }: UserProfileProps) {
       setEmail(userDataMain.userData.email);
       setFirstName(userDataMain.userData.firstName);
       setLastName(userDataMain.userData.lastName);
+      setIsLoading(false);
+
+      const { expiry } = userDataMain;
+      console.log("Expiry time:", expiry);
+      setExpiryTime(expiry);
     }
   }, [userDataMain]);
 
-  /**
-   * loadingStatus function
-   *
-   * Checks if all user data is loaded and updates isLoading state accordingly.
-   * Redirects to login page if user data is incomplete.
-   */
-  const loadingStatus = () => {
-    if (username && email && firstName && lastName) {
-      setIsLoading(false);
-    } else {
-      router.push("/login");
-    }
-  };
+  function getCurrentTimeInMillis(): number {
+    return Date.now();
+  }
 
-  /**
-   * closeProfilePopUp function
-   *
-   * Closes the user profile popup.
-   */
+  // Clear the timer when the component unmounts or when the user logs out
+  // return () => clearTimeout(timer);
+
+  //
+  //
+  //
+  useEffect(() => {
+    if (expiryTime >= 0) {
+      startContinuousTimer((timeInMillis) => {
+        console.log(expiryTime);
+        console.log(timeInMillis);
+      });
+    } else {
+      if (userDataMain != null) {
+        const { expiry } = userDataMain;
+        console.log("Expiry time:", expiry);
+
+        setExpiryTime(expiry);
+      }
+    }
+  }, [expiryTime]); // Explicit dependency on expiryTime
+
+  function startContinuousTimer(callback: (timeInMillis: number) => void) {
+    if (expiryTime <= 0 || expiryTime === null || expiryTime === undefined) {
+      // throw new Error("Expiry time is not set or invalid.");
+    }
+
+    // Call the callback immediately with initial time
+    const currentTimeInMillis = getCurrentTimeInMillis();
+    callback(currentTimeInMillis);
+
+    // Set up interval
+    const intervalId = setInterval(() => {
+      const currentTimeInMillis = getCurrentTimeInMillis();
+      callback(currentTimeInMillis);
+
+      const remainingTime = calculateRemainingTime(
+        expiryTime,
+        currentTimeInMillis
+      );
+      setExpiryTime11(remainingTime);
+
+      checkRemainingTime(remainingTime);
+      console.log("Time remaining until expiry:", remainingTime);
+    }, 1000);
+    return intervalId;
+  }
+
+  function checkRemainingTime(remainingTime: number): void {
+    console.log(remainingTime);
+    if (remainingTime < 0) {
+      console.log("logging out");
+      console.log(remainingTime);
+    }
+  }
+
+  function calculateRemainingTime(
+    expiryTime: number,
+    currentTimeInMillis: number
+  ): number {
+    return expiryTime - currentTimeInMillis;
+  }
+
+  // Define function to get current time in milliseconds (e.g., using Date.now())
+
+  //
+  //
+
+  // function to direct user to log in page if no user is logged in
+  function checkLoginedUser(username: string) {
+    if (username == "") {
+      console.log(username);
+      // logOut();
+    }
+  }
   const closeProfilePopUp = () => {
     setIsOpen(false);
   };
@@ -140,6 +210,7 @@ function UserProfile({ onProfileClick }: UserProfileProps) {
     setFirstName("");
     setLastName("");
     setIsOpen(false);
+    localStorage.removeItem("refreshed");
     router.push("/login");
   };
 
@@ -203,3 +274,7 @@ function UserProfile({ onProfileClick }: UserProfileProps) {
   );
 }
 export default UserProfile;
+
+
+
+
